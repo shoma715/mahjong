@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── ベースリセット ───────────────────────────────────────────────── */
+@layer base {
+  html, body {
+    @apply bg-felt text-white;
+    font-family: 'Noto Sans JP', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* iOS スクロールバウンス防止 */
+    overscroll-behavior: none;
+  }
+
+  * {
+    /* タップ時のハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* スクロールバー（Webkit） */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-felt-200 rounded-full; }
+}
+
+/* ── 共通コンポーネント ───────────────────────────────────────────── */
+@layer components {
+
+  /* カード */
+  .card {
+    @apply bg-felt-50 rounded-2xl p-4 border border-white/5;
+  }
+
+  /* ボタン — プライマリ */
+  .btn-primary {
+    @apply w-full py-3 px-6 rounded-xl font-bold text-base
+           bg-jade text-white
+           active:scale-95 transition-transform duration-100
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* ボタン — セカンダリ */
+  .btn-secondary {
+    @apply w-full py-3 px-6 rounded-xl font-medium text-base
+           bg-felt-100 text-white/80 border border-white/10
+           active:scale-95 transition-transform duration-100;
+  }
+
+  /* インプット */
+  .input-base {
+    @apply w-full bg-felt-100 border border-white/10 rounded-xl
+           px-4 py-3 text-white placeholder-white/30
+           focus:outline-none focus:border-jade/60
+           transition-colors duration-150;
+  }
+
+  /* 順位バッジ */
+  .rank-badge {
+    @apply inline-flex items-center justify-center w-7 h-7 rounded-full
+           text-xs font-bold;
+  }
+  .rank-badge-1 { @apply bg-gold/20 text-gold; }
+  .rank-badge-2 { @apply bg-white/10 text-white/70; }
+  .rank-badge-3 { @apply bg-amber-900/40 text-amber-600; }
+  .rank-badge-4 { @apply bg-red-900/30 text-red-400; }
+
+  /* ポイント表示 */
+  .point-positive { @apply text-jade-light font-bold; }
+  .point-negative { @apply text-red-400 font-bold; }
+  .point-zero     { @apply text-white/50 font-bold; }
+
+  /* セクションヘッダー */
+  .section-title {
+    @apply text-xs font-medium tracking-widest text-white/40 uppercase;
+  }
+
+  /* ボトムナビアイテム */
+  .nav-item {
+    @apply flex flex-col items-center gap-0.5 pt-2 pb-1 px-4
+           text-white/40 transition-colors duration-150;
+  }
+  .nav-item.active { @apply text-jade-light; }
+
+  /* ページコンテナ（ボトムナビ分の padding を確保） */
+  .page-container {
+    @apply max-w-md mx-auto px-4 pt-4;
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 12px));
+  }
+}
+
+/* ── ユーティリティ ───────────────────────────────────────────────── */
+@layer utilities {
+  /* 数字は等幅で揃える */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* display フォント */
+  .font-display { font-family: 'Bebas Neue', 'Noto Sans JP', sans-serif; }
+
+  .animate-slide-up {
+    animation: slide-up 0.28s ease-out both;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
