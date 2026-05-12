@@ -23,7 +23,6 @@
           type="button"
           class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
           :class="tab === 'season' ? 'bg-jade text-white' : 'text-white/50'"
-          :disabled="seasons.length === 0"
           @click="tab = 'season'"
         >
           シーズン成績
@@ -33,8 +32,8 @@
       <div v-if="tab === 'season' && seasons.length > 0" class="card mb-4">
         <label class="section-title block mb-2">シーズンを選択</label>
         <select v-model="selectedSeasonId" class="input-base">
-          <option v-for="s in seasons" :key="s.id" :value="s.id">
-            {{ s.name }}（{{ seasonRangeLabel(s) }}）
+          <option v-for="s in sortedSeasons" :key="s.id" :value="s.id">
+            {{ s.name }}
           </option>
         </select>
       </div>
@@ -133,6 +132,14 @@ const seasonRangeLabel = (s: Season) => {
   const end = s.end_date ?? '進行中'
   return `${s.start_date} 〜 ${end}`
 }
+
+const sortedSeasons = computed(() => {
+  return [...seasons.value].sort((a, b) => {
+    const dateA = new Date(a.created_at ?? 0).getTime()
+    const dateB = new Date(b.created_at ?? 0).getTime()
+    return dateB - dateA
+  })
+})
 
 const resolveSeasonId = (list: Season[], currentId: string | null) => {
   if (selectedSeasonId.value && list.some(x => x.id === selectedSeasonId.value)) {
