@@ -9,7 +9,7 @@
       <label class="section-title block mb-2">シーズン</label>
       <select v-model="selectedSeasonId" class="input-base" :disabled="seasons.length === 0">
         <option v-for="s in seasons" :key="s.id" :value="s.id">
-          {{ s.name }}（{{ seasonRangeLabel(s) }}）
+          {{ s.name }}
         </option>
       </select>
       <p v-if="seasons.length === 0" class="text-white/40 text-xs mt-2">
@@ -77,11 +77,6 @@ const formatTime = (iso: string) => {
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const seasonRangeLabel = (s: Season) => {
-  const end = s.end_date ?? '進行中'
-  return `${s.start_date} 〜 ${end}`
-}
-
 const grouped = computed(() => {
   const map = new Map<string, HanchanWithScores[]>()
   for (const h of list.value) {
@@ -129,8 +124,8 @@ onMounted(async () => {
     fetchSeasons(),
     fetchCurrentSeason(),
   ])
-  seasons.value = allSeasons
-  selectedSeasonId.value = current?.id ?? allSeasons[0]?.id ?? null
+  seasons.value = [...allSeasons].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+  selectedSeasonId.value = current?.id ?? seasons.value[0]?.id ?? null
   await loadList()
   listReady.value = true
   loading.value = false
