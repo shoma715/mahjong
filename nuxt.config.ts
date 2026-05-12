@@ -1,4 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const projectRoot = dirname(fileURLToPath(import.meta.url))
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: true },
@@ -7,6 +12,15 @@ export default defineNuxtConfig({
   // 「Vite Node IPC socket path not configured」が発生するため有効化する
   experimental: {
     viteEnvironmentApi: true,
+  },
+
+  // Vite 7 + viteEnvironmentApi 時に #app-manifest が解決されず dev が落ちる対策（Nuxt の empty スタブと同等）
+  vite: {
+    resolve: {
+      alias: {
+        '#app-manifest': resolve(projectRoot, 'node_modules/mocked-exports/lib/empty.mjs'),
+      },
+    },
   },
 
   modules: [
@@ -53,6 +67,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: '友人間のクローズド麻雀成績管理アプリ' },
         { name: 'theme-color', content: '#0f1923' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],

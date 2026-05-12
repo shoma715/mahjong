@@ -9,9 +9,13 @@ export interface Season {
   id: string
   name: string
   start_date: string
-  end_date: string
+  /** 終了日時（その瞬間まで含む）。NULL のときは進行中 */
+  end_date: string | null
   created_at?: string
 }
+
+/** シーズン作成UI用（暦の四半期イメージ） */
+export type SeasonKind = 'spring' | 'summer' | 'autumn' | 'winter'
 
 export interface Hanchan {
   id: string
@@ -34,13 +38,19 @@ export interface Score {
   created_at?: string
 }
 
-export interface ScoreWithUser extends Score {
+/** scores + users JOIN など、関連データを含むスコア行 */
+export interface ScoreWithRelations extends Score {
   user: User
 }
 
 export interface HanchanWithScores extends Hanchan {
-  scores: ScoreWithUser[]
+  scores: ScoreWithRelations[]
 }
+
+export type HanchanRulesInput = Pick<
+  Hanchan,
+  'rule_oka' | 'rule_uma_1' | 'rule_uma_2' | 'rule_uma_3' | 'rule_uma_4'
+>
 
 export interface ScoreInput {
   user_id: string | null

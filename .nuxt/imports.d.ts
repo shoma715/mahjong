@@ -33,8 +33,9 @@ export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composab
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { useAuth } from '../composables/useAuth';
 export { useHanchans } from '../composables/useHanchans';
+export { useMahjongSeasons } from '../composables/useMahjongSeasons';
 export { useScoreCalc } from '../composables/useScoreCalc';
-export { useSeasons } from '../composables/useSeasons';
+export { ONGOING_SEASON_END_DATE, useSeasons } from '../composables/useSeasons';
 export { useStats } from '../composables/useStats';
 export { useSupabase } from '../composables/useSupabase';
 export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';

@@ -5,9 +5,71 @@
       <h1 class="font-display text-3xl tracking-wide text-white">半荘を記録</h1>
     </header>
 
-    <section class="card mb-4">
-      <label class="section-title block mb-2">対局日</label>
-      <input v-model="playedDate" type="date" class="input-base tabular">
+    <div v-if="seasonLoading" class="card text-center text-white/40 py-12">
+      読み込み中…
+    </div>
+
+    <div
+      v-else-if="!currentSeason"
+      class="rounded-2xl border-2 border-amber-500/50 bg-amber-950/40 px-6 py-10 text-center space-y-4"
+      role="alert"
+    >
+      <p class="font-display text-xl sm:text-2xl text-amber-100 leading-snug">
+        現在進行中のシーズンがありません。ホーム画面から新しいシーズンを開始してから記録してください。
+      </p>
+      <NuxtLink to="/" class="inline-block text-jade-light underline text-sm">
+        ホームへ戻る
+      </NuxtLink>
+    </div>
+
+    <template v-else>
+      <section class="card mb-4">
+        <label class="section-title block mb-2">対局日</label>
+        <input v-model="playedDate" type="date" class="input-base tabular">
+      </section>
+
+      <section class="card mb-4">
+      <button
+        type="button"
+        class="w-full flex items-center justify-between gap-2 py-1 text-left"
+        @click="rulesOpen = !rulesOpen"
+      >
+        <span class="section-title !mb-0">詳細設定（オカ・ウマ）</span>
+        <ChevronDownIcon
+          class="w-5 h-5 text-white/50 shrink-0 transition-transform duration-200"
+          :class="{ 'rotate-180': rulesOpen }"
+        />
+      </button>
+      <div v-show="rulesOpen" class="mt-4 pt-4 border-t border-white/10 space-y-4">
+        <p class="text-xs text-white/40 leading-relaxed">
+          デフォルトは M リーグ準拠（オカ 20 / ウマ +30, +10, −10, −30）。半荘ごとに変更すると、プレビュー・保存の両方に反映されます。
+        </p>
+        <div>
+          <label class="text-xs text-white/50 block mb-1">オカ（1位に加算する pt）</label>
+          <input v-model.number="rules.rule_oka" type="number" step="0.1" class="input-base tabular">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-white/50 block mb-1">1位ウマ</label>
+            <input v-model.number="rules.rule_uma_1" type="number" step="0.1" class="input-base tabular">
+          </div>
+          <div>
+            <label class="text-xs text-white/50 block mb-1">2位ウマ</label>
+            <input v-model.number="rules.rule_uma_2" type="number" step="0.1" class="input-base tabular">
+          </div>
+          <div>
+            <label class="text-xs text-white/50 block mb-1">3位ウマ</label>
+            <input v-model.number="rules.rule_uma_3" type="number" step="0.1" class="input-base tabular">
+          </div>
+          <div>
+            <label class="text-xs text-white/50 block mb-1">4位ウマ</label>
+            <input v-model.number="rules.rule_uma_4" type="number" step="0.1" class="input-base tabular">
+          </div>
+        </div>
+        <button type="button" class="btn-secondary text-sm py-2" @click="resetRules">
+          Mリーグ準拠の値に戻す
+        </button>
+      </div>
     </section>
 
     <section class="space-y-4 mb-4">
@@ -92,17 +154,29 @@
         </div>
       </div>
     </Teleport>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { User, ScoreInput, CalcResult } from '~/types'
+import { ChevronDownIcon } from '@heroicons/vue/24/outline'
+import type { User, ScoreInput, CalcResult, HanchanRulesInput, Season } from '~/types'
+import { useSeasons } from '~/composables/useSeasons'
 
 definePageMeta({ layout: 'default' })
 
 const { fetchUsers, createUser } = useAuth()
 const { saveHanchan } = useHanchans()
-const { validateTotal, currentTotal, calcPoints, formatPoint, pointClass } = useScoreCalc()
+const {
+  validateTotal,
+  currentTotal,
+  calcPoints,
+  formatPoint,
+  pointClass,
+  defaultHanchanRules,
+} = useScoreCalc()
+
+const { fetchCurrentSeason } = useSeasons()
 
 const todayStr = () => {
   const t = new Date()
@@ -112,7 +186,13 @@ const todayStr = () => {
   return `${y}-${m}-${d}`
 }
 
+const seasonLoading = ref(true)
+const currentSeason = ref<Season | null>(null)
+
 const playedDate = ref(todayStr())
+const rulesOpen = ref(false)
+const rules = ref<HanchanRulesInput>({ ...defaultHanchanRules() })
+
 const users = ref<User[]>([])
 const rows = ref<ScoreInput[]>([
   { user_id: null, raw_score: null },
@@ -144,12 +224,29 @@ const rawScoresFinite = computed(() =>
 )
 
 const canSave = computed(
-  () => totalValid.value && fourUsersPicked.value && rawScoresFinite.value,
+  () =>
+    Boolean(currentSeason.value)
+    && totalValid.value
+    && fourUsersPicked.value
+    && rawScoresFinite.value,
 )
+
+const finiteOr = (v: number, fallback: number) =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback
+
+const defaults = defaultHanchanRules()
+
+const rulePick = computed<HanchanRulesInput>(() => ({
+  rule_oka: finiteOr(rules.value.rule_oka, defaults.rule_oka),
+  rule_uma_1: finiteOr(rules.value.rule_uma_1, defaults.rule_uma_1),
+  rule_uma_2: finiteOr(rules.value.rule_uma_2, defaults.rule_uma_2),
+  rule_uma_3: finiteOr(rules.value.rule_uma_3, defaults.rule_uma_3),
+  rule_uma_4: finiteOr(rules.value.rule_uma_4, defaults.rule_uma_4),
+}))
 
 const preview = computed<CalcResult[]>(() => {
   if (!canSave.value) return []
-  return calcPoints(rows.value as ScoreInput[])
+  return calcPoints(rows.value as ScoreInput[], rulePick.value)
 })
 
 const userName = (id: string) => users.value.find(u => u.id === id)?.name ?? ''
@@ -158,20 +255,31 @@ const loadUsers = async () => {
   users.value = await fetchUsers()
 }
 
-onMounted(loadUsers)
+onMounted(async () => {
+  seasonLoading.value = true
+  const [usersList, season] = await Promise.all([fetchUsers(), fetchCurrentSeason()])
+  users.value = usersList
+  currentSeason.value = season
+  seasonLoading.value = false
+})
 
 const onSave = async () => {
   errorMsg.value = ''
+  if (!currentSeason.value) return
   if (!canSave.value) return
   saving.value = true
-  const results = calcPoints(rows.value as ScoreInput[])
-  const h = await saveHanchan(playedDate.value, results)
+  const results = calcPoints(rows.value as ScoreInput[], rulePick.value)
+  const h = await saveHanchan(playedDate.value, results, rulePick.value)
   saving.value = false
   if (!h) {
     errorMsg.value = '保存に失敗しました。Supabase の設定とテーブルを確認してください。'
     return
   }
   await navigateTo('/history')
+}
+
+const resetRules = () => {
+  Object.assign(rules.value, defaultHanchanRules())
 }
 
 const onAddUser = async () => {

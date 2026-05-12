@@ -86,8 +86,20 @@ export const useScoreCalc = () => {
     return 'point-zero'
   }
 
+  const defaultHanchanRules = (): Pick<
+    Hanchan,
+    'rule_oka' | 'rule_uma_1' | 'rule_uma_2' | 'rule_uma_3' | 'rule_uma_4'
+  > => ({
+    rule_oka: DEFAULT_RULES.oka,
+    rule_uma_1: DEFAULT_RULES.uma[0],
+    rule_uma_2: DEFAULT_RULES.uma[1],
+    rule_uma_3: DEFAULT_RULES.uma[2],
+    rule_uma_4: DEFAULT_RULES.uma[3],
+  })
+
   return {
     DEFAULT_RULES,
+    defaultHanchanRules,
     calcPoints,
     validateTotal,
     currentTotal,

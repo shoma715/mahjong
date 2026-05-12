@@ -1,14 +1,28 @@
 <template>
   <div class="page-container">
-    <header class="mb-6">
+    <header class="mb-4">
       <p class="section-title mb-1">対局履歴</p>
       <h1 class="font-display text-3xl tracking-wide text-white">過去の半荘</h1>
     </header>
 
+    <section class="card mb-4">
+      <label class="section-title block mb-2">シーズン</label>
+      <select v-model="selectedSeasonId" class="input-base" :disabled="seasons.length === 0">
+        <option v-for="s in seasons" :key="s.id" :value="s.id">
+          {{ s.name }}（{{ seasonRangeLabel(s) }}）
+        </option>
+      </select>
+      <p v-if="seasons.length === 0" class="text-white/40 text-xs mt-2">
+        シーズンがありません。
+        <NuxtLink to="/admin/seasons" class="text-jade-light underline">管理画面</NuxtLink>
+        から開始してください。
+      </p>
+    </section>
+
     <div v-if="loading" class="card text-center text-white/40 py-10">読み込み中…</div>
 
-    <div v-else-if="grouped.length === 0" class="card text-center text-white/40 text-sm py-10">
-      まだ対局がありません
+    <div v-else-if="!selectedSeasonId || grouped.length === 0" class="card text-center text-white/40 text-sm py-10">
+      このシーズンに対局記録がありません
     </div>
 
     <div v-else class="space-y-6">
@@ -17,22 +31,21 @@
         <NuxtLink
           v-for="h in g.items"
           :key="h.id"
-          :to="`/history/${h.id}`"
+          :to="`/edit-hanchan/${h.id}`"
           class="card block active:scale-[0.99] transition-transform"
         >
-          <div class="flex justify-between items-start gap-2 mb-2">
-            <span class="text-white/40 text-xs tabular">{{ formatTime(h.played_at) }}</span>
-            <span class="text-jade-light text-xs">編集 →</span>
-          </div>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex justify-end items-start gap-0 mb-2">
+              <span class="text-jade-light text-xs">編集 →</span>
+            </div>
+          <div class="flex flex-nowrap gap-1 overflow-hidden">
             <span
-              v-for="s in sortedScores(h.scores)"
-              :key="s.id"
-              class="inline-flex items-center gap-1 text-xs"
+              v-for="sc in sortedScores(h.scores)"
+              :key="sc.id"
+              class="inline-flex items-center gap-0.5 text-xs shrink-0 min-w-0"
             >
-              <span class="rank-badge shrink-0" :class="`rank-badge-${s.placement}`">{{ s.placement }}</span>
-              <span class="text-white/80 truncate max-w-[4.5rem]">{{ s.user.name }}</span>
-              <span class="tabular shrink-0" :class="pointClass(s.point)">{{ formatPoint(s.point) }}</span>
+              <span class="rank-badge shrink-0 text-xs leading-5 w-5 h-5 flex items-center justify-center" :class="`rank-badge-${sc.placement}`">{{ sc.placement }}</span>
+              <span class="text-white/80 truncate max-w-[3rem]">{{ sc.user.name }}</span>
+              <span class="tabular shrink-0" :class="pointClass(sc.point)">{{ formatPoint(sc.point) }}</span>
             </span>
           </div>
         </NuxtLink>
@@ -42,22 +55,31 @@
 </template>
 
 <script setup lang="ts">
-import type { HanchanWithScores, ScoreWithUser } from '~/types'
+import type { HanchanWithScores, ScoreWithRelations, Season } from '~/types'
+import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
-const { fetchHanchans } = useHanchans()
+const { fetchHanchansBySeason } = useHanchans()
+const { fetchSeasons, fetchCurrentSeason } = useMahjongSeasons()
 const { formatPoint, pointClass } = useScoreCalc()
 
 const loading = ref(true)
+const seasons = ref<Season[]>([])
+const selectedSeasonId = ref<string | null>(null)
 const list = ref<HanchanWithScores[]>([])
 
-const sortedScores = (scores: ScoreWithUser[]) =>
+const sortedScores = (scores: ScoreWithRelations[]) =>
   [...scores].sort((a, b) => a.placement - b.placement)
 
 const formatTime = (iso: string) => {
   const d = new Date(iso)
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+const seasonRangeLabel = (s: Season) => {
+  const end = s.end_date ?? '進行中'
+  return `${s.start_date} 〜 ${end}`
 }
 
 const grouped = computed(() => {
@@ -72,7 +94,7 @@ const grouped = computed(() => {
   return keys.map(date => ({
     date,
     dateLabel: formatDateLabel(date),
-    items: map.get(date)!,
+    items: map.get(date)!.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime()),
   }))
 })
 
@@ -81,9 +103,36 @@ const formatDateLabel = (ymd: string) => {
   return `${y}年${m}月${d}日`
 }
 
+const listReady = ref(false)
+
+const loadList = async () => {
+  const s = seasons.value.find(x => x.id === selectedSeasonId.value)
+  if (!s) {
+    list.value = []
+    return
+  }
+  list.value = await fetchHanchansBySeason(s.start_date, s.end_date)
+  // Ensure newest first
+  list.value = list.value.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+}
+
+watch(selectedSeasonId, async () => {
+  if (!listReady.value || !selectedSeasonId.value) return
+  loading.value = true
+  await loadList()
+  loading.value = false
+})
+
 onMounted(async () => {
   loading.value = true
-  list.value = await fetchHanchans(200)
+  const [allSeasons, current] = await Promise.all([
+    fetchSeasons(),
+    fetchCurrentSeason(),
+  ])
+  seasons.value = allSeasons
+  selectedSeasonId.value = current?.id ?? allSeasons[0]?.id ?? null
+  await loadList()
+  listReady.value = true
   loading.value = false
 })
 </script>

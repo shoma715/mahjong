@@ -30,7 +30,8 @@
         </button>
       </div>
       <p v-if="tab === 'season' && !currentSeason" class="text-white/40 text-sm mb-4">
-        現在日付に該当するシーズンがありません（seasons テーブルを確認）。
+        進行中のシーズンがありません。
+        <NuxtLink to="/admin/seasons" class="text-jade-light underline">シーズン管理</NuxtLink>
       </p>
 
       <div v-if="loading" class="card text-center text-white/40 py-10">読み込み中…</div>
@@ -99,12 +100,13 @@
 
 <script setup lang="ts">
 import type { User, HanchanWithScores, PlayerStats } from '~/types'
+import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
 const { currentUserId, fetchUsers } = useAuth()
 const { fetchHanchans, fetchHanchansBySeason } = useHanchans()
-const { fetchCurrentSeason } = useSeasons()
+const { fetchCurrentSeason } = useMahjongSeasons()
 const { calcPlayerStats, formatRate, formatAvgPlacement } = useStats()
 const { formatPoint, pointClass } = useScoreCalc()
 

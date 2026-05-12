@@ -1,4 +1,4 @@
-import type { Hanchan, HanchanWithScores, CalcResult } from '~/types'
+import type { Hanchan, HanchanWithScores, CalcResult, HanchanRulesInput } from '~/types'
 
 export const useHanchans = () => {
   const supabase = useSupabase()
@@ -13,7 +13,7 @@ export const useHanchans = () => {
           user:users (*)
         )
       `)
-      .order('played_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit)
 
     if (error) {
@@ -23,10 +23,12 @@ export const useHanchans = () => {
     return data as HanchanWithScores[]
   }
 
+  /** endDate が null のときは進行中シーズン扱いで上限を遠い未来にする */
   const fetchHanchansBySeason = async (
     startDate: string,
-    endDate: string,
+    endDate: string | null,
   ): Promise<HanchanWithScores[]> => {
+    const end = endDate ?? new Date().toISOString()
     const { data, error } = await supabase
       .from('hanchans')
       .select(`
@@ -37,8 +39,9 @@ export const useHanchans = () => {
         )
       `)
       .gte('played_at', `${startDate}T00:00:00`)
-      .lte('played_at', `${endDate}T23:59:59.999`)
-      .order('played_at', { ascending: false })
+      .lte('played_at', end)
+      .order('created_at', { ascending: false })
+      .limit(500)
 
     if (error) {
       console.error('[useHanchans] fetchHanchansBySeason:', error)
@@ -47,7 +50,12 @@ export const useHanchans = () => {
     return data as HanchanWithScores[]
   }
 
+  /**
+   * 指定IDの半荘1件を取得（scores に users を JOIN）
+   * 編集画面 `pages/history/[id].vue` から利用
+   */
   const fetchHanchanById = async (id: string): Promise<HanchanWithScores | null> => {
+    if (!id?.trim()) return null
     const { data, error } = await supabase
       .from('hanchans')
       .select(`
@@ -58,23 +66,34 @@ export const useHanchans = () => {
         )
       `)
       .eq('id', id)
-      .maybeSingle()
+      .limit(1)
 
     if (error) {
       console.error('[useHanchans] fetchHanchanById:', error)
       return null
     }
-    if (!data) return null
-    return data as HanchanWithScores
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+    return row as HanchanWithScores
   }
 
   const saveHanchan = async (
     playedAt: string,
     calcResults: CalcResult[],
+    rules?: HanchanRulesInput,
   ): Promise<Hanchan | null> => {
+    const insertPayload = {
+      played_at: new Date(`${playedAt}T12:00:00`).toISOString(),
+      rule_oka: rules?.rule_oka ?? 20,
+      rule_uma_1: rules?.rule_uma_1 ?? 30,
+      rule_uma_2: rules?.rule_uma_2 ?? 10,
+      rule_uma_3: rules?.rule_uma_3 ?? -10,
+      rule_uma_4: rules?.rule_uma_4 ?? -30,
+    }
+
     const { data: hanchan, error: hanchanError } = await supabase
       .from('hanchans')
-      .insert({ played_at: new Date(`${playedAt}T12:00:00`).toISOString() })
+      .insert(insertPayload)
       .select()
       .single()
 

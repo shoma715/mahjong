@@ -2103,7 +2103,7 @@ const _MZzIF_wBzuzjwiAFpeMpqcFccM3kgyrdCAwuCFDyMI = (function(nitro) {
 
 const rootDir = "/Users/shomatakeda/Desktop/mahjong-tracker";
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"},{"charset":"utf-8"},{"name":"description","content":"友人間のクローズド麻雀成績管理アプリ"},{"name":"theme-color","content":"#0f1923"},{"name":"apple-mobile-web-app-capable","content":"yes"},{"name":"apple-mobile-web-app-status-bar-style","content":"black-translucent"}],"link":[{"rel":"preconnect","href":"https://fonts.googleapis.com"},{"rel":"preconnect","href":"https://fonts.gstatic.com","crossorigin":""},{"rel":"stylesheet","href":"https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Bebas+Neue&display=swap"}],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no","title":"麻雀スコアトラッカー"};
+const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"},{"charset":"utf-8"},{"name":"description","content":"友人間のクローズド麻雀成績管理アプリ"},{"name":"theme-color","content":"#0f1923"},{"name":"mobile-web-app-capable","content":"yes"},{"name":"apple-mobile-web-app-capable","content":"yes"},{"name":"apple-mobile-web-app-status-bar-style","content":"black-translucent"}],"link":[{"rel":"preconnect","href":"https://fonts.googleapis.com"},{"rel":"preconnect","href":"https://fonts.gstatic.com","crossorigin":""},{"rel":"stylesheet","href":"https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Bebas+Neue&display=swap"}],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no","title":"麻雀スコアトラッカー"};
 
 const appRootTag = "div";
 
@@ -2208,22 +2208,7 @@ _xrjskxQ3BYANEd6b8q4f0mfYWXapHYoz1iefj7idGFA,
 _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 ];
 
-const assets = {
-  "/index.mjs": {
-    "type": "text/javascript; charset=utf-8",
-    "etag": "\"1a84a-2Z+nNXt/k+j/IRQNXuhZoOB4/Wk\"",
-    "mtime": "2026-05-11T11:37:33.477Z",
-    "size": 108618,
-    "path": "index.mjs"
-  },
-  "/index.mjs.map": {
-    "type": "application/json",
-    "etag": "\"69c6d-qJZf1LSpIFCTNLtWYKZy70oOfW8\"",
-    "mtime": "2026-05-11T11:37:33.476Z",
-    "size": 433261,
-    "path": "index.mjs.map"
-  }
-};
+const assets = {};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));

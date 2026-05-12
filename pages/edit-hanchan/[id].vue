@@ -53,6 +53,34 @@
       <button type="button" class="btn-secondary text-red-400 border-red-400/30 mb-4" @click="onDelete">
         この半荘を削除
       </button>
+
+      <!-- Other hanchans in this season -->
+      <div v-if="otherHanchans.length > 0" class="mt-8 pt-6 border-t border-white/10">
+        <p class="section-title mb-4">シーズン内の他の半荘</p>
+        <div class="space-y-2">
+          <NuxtLink
+            v-for="h in otherHanchans"
+            :key="h.id"
+            :to="`/edit-hanchan/${h.id}`"
+            class="card block active:scale-[0.99] transition-transform"
+          >
+            <div class="flex justify-end items-start gap-0 mb-2">
+              <span class="text-jade-light text-xs">編集 →</span>
+            </div>
+            <div class="flex flex-nowrap gap-1 overflow-hidden">
+              <span
+                v-for="sc in sortedScores(h.scores)"
+                :key="sc.id"
+                class="inline-flex items-center gap-0.5 text-xs shrink-0 min-w-0"
+              >
+                <span class="rank-badge shrink-0 text-xs leading-5 w-5 h-5 flex items-center justify-center" :class="`rank-badge-${sc.placement}`">{{ sc.placement }}</span>
+                <span class="text-white/80 truncate max-w-[3rem]">{{ sc.user.name }}</span>
+                <span class="tabular shrink-0" :class="pointClass(sc.point)">{{ formatPoint(sc.point) }}</span>
+              </span>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
     </template>
 
     <div v-else class="card text-center text-white/40 py-10 space-y-2">
@@ -62,8 +90,9 @@
 </template>
 
 <script setup lang="ts">
-import type { User, ScoreInput, HanchanWithScores, CalcResult } from '~/types'
+import type { User, ScoreInput, HanchanWithScores, CalcResult, ScoreWithRelations } from '~/types'
 import { useHanchans } from '~/composables/useHanchans'
+import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
@@ -73,6 +102,8 @@ const id = computed(() => route.params.id as string)
 const { fetchUsers } = useAuth()
 const hanchansApi = useHanchans()
 const { validateTotal, currentTotal, calcPoints } = useScoreCalc()
+const { fetchCurrentSeason } = useMahjongSeasons()
+const { formatPoint, pointClass } = useScoreCalc()
 
 const loading = ref(true)
 const hanchan = ref<HanchanWithScores | null>(null)
@@ -87,6 +118,7 @@ const rows = ref<ScoreInput[]>([
 
 const saving = ref(false)
 const errorMsg = ref('')
+const otherHanchans = ref<HanchanWithScores[]>([])
 
 const totalPoints = computed(() => currentTotal(rows.value as ScoreInput[]))
 const totalValid = computed(() => validateTotal(rows.value as ScoreInput[]))
@@ -114,21 +146,38 @@ const toYmd = (iso: string) => {
   return `${y}-${m}-${day}`
 }
 
+const formatTime = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+const sortedScores = (scores: ScoreWithRelations[]) =>
+  [...scores].sort((a, b) => a.placement - b.placement)
+
 const load = async () => {
   loading.value = true
   errorMsg.value = ''
+  otherHanchans.value = []
   try {
-    const [u, h] = await Promise.all([
+    const [u, h, season] = await Promise.all([
       fetchUsers(),
       hanchansApi.fetchHanchanById(id.value),
+      fetchCurrentSeason(),
     ])
     users.value = u
     hanchan.value = h
     if (!h && id.value?.trim()) {
       errorMsg.value = '半荘の取得に失敗しました。ネットワークと Supabase を確認してください。'
     }
+    // Load other hanchans in the same season
+    if (h && season) {
+      const seasonHanchans = await hanchansApi.fetchHanchansBySeason(season.start_date, season.end_date)
+      otherHanchans.value = seasonHanchans
+        .filter(x => x.id !== h.id)
+        .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+    }
   } catch (e) {
-    console.error('[history/edit] load:', e)
+    console.error('[edit-hanchan] load:', e)
     errorMsg.value = '読み込み中にエラーが発生しました。'
     hanchan.value = null
   }
