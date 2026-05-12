@@ -20,6 +20,8 @@ export type SeasonKind = 'spring' | 'summer' | 'autumn' | 'winter'
 export interface Hanchan {
   id: string
   played_at: string
+  /** 所属シーズン（集計・履歴のキー） */
+  season_id: string | null
   rule_oka: number
   rule_uma_1: number
   rule_uma_2: number

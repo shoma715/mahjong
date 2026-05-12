@@ -269,7 +269,7 @@ const onSave = async () => {
   if (!canSave.value) return
   saving.value = true
   const results = calcPoints(rows.value as ScoreInput[], rulePick.value)
-  const h = await saveHanchan(playedDate.value, results, rulePick.value)
+  const h = await saveHanchan(playedDate.value, results, currentSeason.value.id, rulePick.value)
   saving.value = false
   if (!h) {
     errorMsg.value = '保存に失敗しました。Supabase の設定とテーブルを確認してください。'

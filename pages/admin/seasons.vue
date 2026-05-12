@@ -23,11 +23,14 @@
         <p v-else class="text-white/50 text-sm">進行中のシーズンはありません。</p>
       </section>
 
-      <section class="card space-y-4">
+      <section class="card space-y-4" :class="{ 'opacity-60': activeSeason }">
         <div>
           <p class="section-title">新しいシーズンを作成</p>
           <p class="text-xs text-white/40 leading-relaxed mt-2">
             年と季節を選ぶと、開始日・終了日・名称を自動で組み立てて保存します。
+          </p>
+          <p v-if="activeSeason" class="text-xs text-amber-200/90 mt-3 leading-relaxed">
+            進行中のシーズンがあるため、新規作成はできません。上の「シーズンを終了する」を実行してから作成してください。
           </p>
         </div>
 
@@ -60,7 +63,7 @@
         <button
           type="button"
           class="btn-primary"
-          :disabled="saving"
+          :disabled="saving || !!activeSeason"
           @click="onCreateSeason"
         >
           {{ saving ? '保存中…' : `「${seasonPreview.name}」を保存` }}
@@ -174,7 +177,11 @@ const onCreateSeason = async () => {
   saving.value = false
 
   if (!row) {
-    formError.value = '作成に失敗しました。Supabase の seasons テーブル定義と接続を確認してください。'
+    if (activeSeason.value) {
+      formError.value = '進行中のシーズンがあるため、先に「シーズンを終了する」を実行してください。'
+    } else {
+      formError.value = '作成に失敗しました。Supabase の seasons テーブル定義と接続を確認してください。'
+    }
     return
   }
 

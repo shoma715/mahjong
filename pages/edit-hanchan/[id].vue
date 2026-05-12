@@ -92,7 +92,6 @@
 <script setup lang="ts">
 import type { User, ScoreInput, HanchanWithScores, CalcResult, ScoreWithRelations } from '~/types'
 import { useHanchans } from '~/composables/useHanchans'
-import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
@@ -102,7 +101,6 @@ const id = computed(() => route.params.id as string)
 const { fetchUsers } = useAuth()
 const hanchansApi = useHanchans()
 const { validateTotal, currentTotal, calcPoints } = useScoreCalc()
-const { fetchCurrentSeason } = useMahjongSeasons()
 const { formatPoint, pointClass } = useScoreCalc()
 
 const loading = ref(true)
@@ -159,19 +157,17 @@ const load = async () => {
   errorMsg.value = ''
   otherHanchans.value = []
   try {
-    const [u, h, season] = await Promise.all([
+    const [u, h] = await Promise.all([
       fetchUsers(),
       hanchansApi.fetchHanchanById(id.value),
-      fetchCurrentSeason(),
     ])
     users.value = u
     hanchan.value = h
     if (!h && id.value?.trim()) {
       errorMsg.value = '半荘の取得に失敗しました。ネットワークと Supabase を確認してください。'
     }
-    // Load other hanchans in the same season
-    if (h && season) {
-      const seasonHanchans = await hanchansApi.fetchHanchansBySeason(season.start_date, season.end_date)
+    if (h) {
+      const seasonHanchans = await hanchansApi.fetchHanchansByPlayedAt(h.played_at)
       otherHanchans.value = seasonHanchans
         .filter(x => x.id !== h.id)
         .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())

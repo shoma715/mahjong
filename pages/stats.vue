@@ -10,7 +10,7 @@
     </div>
 
     <template v-else>
-      <div class="flex rounded-xl bg-felt-100 p-1 mb-6">
+      <div class="flex rounded-xl bg-felt-100 p-1 mb-4">
         <button
           type="button"
           class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -23,14 +23,24 @@
           type="button"
           class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
           :class="tab === 'season' ? 'bg-jade text-white' : 'text-white/50'"
-          :disabled="!currentSeason"
+          :disabled="seasons.length === 0"
           @click="tab = 'season'"
         >
-          シーズン
+          シーズン成績
         </button>
       </div>
-      <p v-if="tab === 'season' && !currentSeason" class="text-white/40 text-sm mb-4">
-        進行中のシーズンがありません。
+
+      <div v-if="tab === 'season' && seasons.length > 0" class="card mb-4">
+        <label class="section-title block mb-2">シーズンを選択</label>
+        <select v-model="selectedSeasonId" class="input-base">
+          <option v-for="s in seasons" :key="s.id" :value="s.id">
+            {{ s.name }}（{{ seasonRangeLabel(s) }}）
+          </option>
+        </select>
+      </div>
+
+      <p v-if="tab === 'season' && seasons.length === 0" class="text-white/40 text-sm mb-4">
+        シーズンがありません。
         <NuxtLink to="/admin/seasons" class="text-jade-light underline">シーズン管理</NuxtLink>
       </p>
 
@@ -99,42 +109,107 @@
 </template>
 
 <script setup lang="ts">
-import type { User, HanchanWithScores, PlayerStats } from '~/types'
+import type { User, HanchanWithScores, PlayerStats, Season } from '~/types'
 import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
 const { currentUserId, fetchUsers } = useAuth()
-const { fetchHanchans, fetchHanchansBySeason } = useHanchans()
-const { fetchCurrentSeason } = useMahjongSeasons()
+const { fetchHanchans, fetchHanchansBySeasonId } = useHanchans()
+const { fetchCurrentSeason, fetchSeasons } = useMahjongSeasons()
 const { calcPlayerStats, formatRate, formatAvgPlacement } = useStats()
 const { formatPoint, pointClass } = useScoreCalc()
 
 const tab = ref<'all' | 'season'>('all')
 const loading = ref(true)
+const seasonTabReady = ref(false)
 const users = ref<User[]>([])
+const seasons = ref<Season[]>([])
+const selectedSeasonId = ref('')
 const hanchans = ref<HanchanWithScores[]>([])
-const currentSeason = ref<Awaited<ReturnType<typeof fetchCurrentSeason>>>(null)
 const stats = ref<PlayerStats | null>(null)
 
-const load = async () => {
-  loading.value = true
-  const [u, season] = await Promise.all([fetchUsers(), fetchCurrentSeason()])
-  users.value = u
-  currentSeason.value = season
+const seasonRangeLabel = (s: Season) => {
+  const end = s.end_date ?? '進行中'
+  return `${s.start_date} 〜 ${end}`
+}
 
-  let list: HanchanWithScores[]
-  if (tab.value === 'season' && season) {
-    list = await fetchHanchansBySeason(season.start_date, season.end_date)
-  } else {
-    list = await fetchHanchans(500)
+const resolveSeasonId = (list: Season[], currentId: string | null) => {
+  if (selectedSeasonId.value && list.some(x => x.id === selectedSeasonId.value)) {
+    return selectedSeasonId.value
   }
-  hanchans.value = list
+  return currentId ?? list[0]?.id ?? ''
+}
 
+const applyStats = (u: User[], list: HanchanWithScores[]) => {
   const me = u.find(x => x.id === currentUserId.value)
   stats.value = me ? calcPlayerStats(me, list) : null
+}
+
+const loadAllTab = async () => {
+  loading.value = true
+  const u = await fetchUsers()
+  users.value = u
+  const list = await fetchHanchans(500)
+  hanchans.value = list
+  applyStats(u, list)
   loading.value = false
 }
 
-watch([tab, currentUserId], load, { immediate: true })
+const loadSeasonTab = async () => {
+  loading.value = true
+  seasonTabReady.value = false
+  const [u, allSeasons, current] = await Promise.all([
+    fetchUsers(),
+    fetchSeasons(),
+    fetchCurrentSeason(),
+  ])
+  users.value = u
+  seasons.value = allSeasons
+  if (allSeasons.length === 0) {
+    selectedSeasonId.value = ''
+    hanchans.value = []
+    applyStats(u, [])
+    loading.value = false
+    seasonTabReady.value = true
+    return
+  }
+  const sid = resolveSeasonId(allSeasons, current?.id ?? null)
+  selectedSeasonId.value = sid
+  const list = await fetchHanchansBySeasonId(sid)
+  hanchans.value = list
+  applyStats(u, list)
+  loading.value = false
+  seasonTabReady.value = true
+}
+
+const loadFromSeasonSelection = async () => {
+  if (!currentUserId.value || tab.value !== 'season' || !selectedSeasonId.value) return
+  loading.value = true
+  const u = users.value.length ? users.value : await fetchUsers()
+  users.value = u
+  const list = await fetchHanchansBySeasonId(selectedSeasonId.value)
+  hanchans.value = list
+  applyStats(u, list)
+  loading.value = false
+}
+
+watch([tab, currentUserId], async () => {
+  if (!currentUserId.value) {
+    stats.value = null
+    loading.value = false
+    seasonTabReady.value = false
+    return
+  }
+  if (tab.value === 'all') {
+    await loadAllTab()
+  } else {
+    await loadSeasonTab()
+  }
+}, { immediate: true })
+
+watch(selectedSeasonId, async () => {
+  if (!seasonTabReady.value || tab.value !== 'season' || !selectedSeasonId.value) return
+  await loadFromSeasonSelection()
+})
 </script>

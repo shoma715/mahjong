@@ -60,7 +60,7 @@ import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
-const { fetchHanchansBySeason } = useHanchans()
+const { fetchHanchansBySeasonId } = useHanchans()
 const { fetchSeasons, fetchCurrentSeason } = useMahjongSeasons()
 const { formatPoint, pointClass } = useScoreCalc()
 
@@ -111,7 +111,7 @@ const loadList = async () => {
     list.value = []
     return
   }
-  list.value = await fetchHanchansBySeason(s.start_date, s.end_date)
+  list.value = await fetchHanchansBySeasonId(s.id)
   // Ensure newest first
   list.value = list.value.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
 }

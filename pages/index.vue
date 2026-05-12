@@ -18,9 +18,10 @@
       <div class="flex items-center gap-2 shrink-0">
         <NuxtLink
           to="/admin/seasons"
-          class="text-white/50 text-xs px-2 py-1 rounded-lg border border-white/10 hover:border-jade/40 hover:text-jade-light transition-colors"
+          class="w-10 h-10 rounded-full bg-felt-100 border border-white/10 flex items-center justify-center text-white/60 hover:border-jade/40 hover:text-jade-light transition-colors"
+          aria-label="設定・シーズン管理"
         >
-          シーズン
+          <Cog6ToothIcon class="w-5 h-5" />
         </NuxtLink>
         <button
           type="button"
@@ -32,34 +33,7 @@
       </div>
     </header>
 
-    <section class="card mb-4 space-y-3">
-      <p class="section-title">シーズン</p>
-      <template v-if="currentSeason">
-        <p class="text-sm text-white/70">
-          進行中: <span class="text-jade-light font-medium">{{ currentSeason.name }}</span>
-          <span class="text-white/40 tabular text-xs block mt-1">{{ currentSeason.start_date }} 〜</span>
-        </p>
-        <button
-          type="button"
-          class="btn-secondary border-red-400/30 text-red-300 text-sm"
-          :disabled="seasonBusy"
-          @click="onRequestEndSeason"
-        >
-          {{ seasonBusy ? '処理中…' : '現在のシーズンを終了する' }}
-        </button>
-      </template>
-      <template v-else>
-        <p class="text-sm text-white/50">進行中のシーズンはありません。</p>
-        <button
-          type="button"
-          class="btn-primary text-sm"
-          :disabled="seasonBusy"
-          @click="openStartSeasonModal"
-        >
-          新しいシーズンを開始
-        </button>
-      </template>
-    </section>
+    <!-- シーズン表示は別で設定するためホーム画面では表示しない -->
 
     <div class="flex rounded-xl bg-felt-100 p-1 mb-4">
       <button
@@ -218,6 +192,7 @@
 </template>
 
 <script setup lang="ts">
+import { Cog6ToothIcon } from '@heroicons/vue/24/outline'
 import type { User, HanchanWithScores, ScoreWithRelations, SeasonKind } from '~/types'
 import { useSeasons } from '~/composables/useSeasons'
 
@@ -227,7 +202,7 @@ const route = useRoute()
 const router = useRouter()
 
 const { currentUserId, currentUserName, login, fetchUsers } = useAuth()
-const { fetchHanchansBySeason, fetchHanchans } = useHanchans()
+const { fetchHanchansBySeasonId, fetchHanchans } = useHanchans()
 const { fetchCurrentSeason, createSeason, endSeason } = useSeasons()
 const { calcAllStats } = useStats()
 const { formatPoint, pointClass } = useScoreCalc()
@@ -257,7 +232,7 @@ const rankingSectionLabel = computed(() => {
 const recentScopeHint = computed(() => {
   if (rankingScope.value === 'all') return '全期間の直近5半荘'
   return currentSeason.value
-    ? `「${currentSeason.value.name}」の直近5半荘`
+    ? '今シーズンに紐付いた対局の直近5半荘'
     : 'シーズン未設定のため対象データなし'
 })
 
@@ -346,7 +321,7 @@ async function loadDashboard() {
   if (rankingScope.value === 'all') {
     hanchans = await fetchHanchans(1000)
   } else if (season) {
-    hanchans = await fetchHanchansBySeason(season.start_date, season.end_date)
+    hanchans = await fetchHanchansBySeasonId(season.id)
   } else {
     hanchans = []
   }
