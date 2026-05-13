@@ -1,8 +1,17 @@
 <template>
   <div class="page-container">
-    <header class="mb-6">
-      <p class="section-title mb-1">成績・スタッツ</p>
-      <h1 class="font-display text-3xl tracking-wide text-white">マイスタッツ</h1>
+    <header class="flex items-start justify-between gap-3 mb-6">
+      <div class="min-w-0">
+        <p class="section-title mb-1">成績・スタッツ</p>
+        <h1 class="font-display text-3xl tracking-wide text-white">マイスタッツ</h1>
+      </div>
+      <button
+        type="button"
+        class="w-10 h-10 rounded-full bg-jade/20 border border-jade/30 flex items-center justify-center text-jade-light font-bold text-sm shrink-0"
+        @click="showUserSelect = true"
+      >
+        {{ currentUserName ? currentUserName[0] : '?' }}
+      </button>
     </header>
 
     <div v-if="!currentUserId" class="card text-center text-white/50 text-sm py-10">
@@ -79,7 +88,7 @@
           </div>
           <div class="flex justify-between">
             <span class="text-white/50">半荘最高得点</span>
-            <span class="tabular font-medium" :class="pointClass(stats.best_point)">{{ formatPoint(stats.best_point) }}</span>
+            <span class="tabular font-medium text-white">{{ stats.best_raw_score.toLocaleString() }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-white/50">トップ率</span>
@@ -104,6 +113,55 @@
         </div>
       </div>
     </template>
+
+    <Teleport to="body">
+      <div
+        v-if="showUserSelect"
+        class="fixed inset-0 z-[60] bg-black/70 flex items-end"
+        @click.self="showUserSelect = false"
+      >
+        <div class="w-full max-w-md mx-auto bg-felt-50 rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
+          <p class="section-title mb-4 text-center">プレイヤーを選択</p>
+          <div class="space-y-2">
+            <button
+              v-for="user in users"
+              :key="user.id"
+              type="button"
+              class="w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left"
+              :class="user.id === currentUserId ? 'bg-jade/20 text-jade-light' : 'bg-felt-100 text-white'"
+              @click="selectUser(user)"
+            >
+              <span class="w-8 h-8 rounded-full bg-jade/20 flex items-center justify-center text-sm font-bold shrink-0">
+                {{ user.name[0] }}
+              </span>
+              <span class="font-medium truncate">{{ user.name }}</span>
+              <span v-if="user.id === currentUserId" class="ml-auto text-xs text-jade-light shrink-0">選択中</span>
+            </button>
+          </div>
+          <button type="button" class="btn-secondary mt-4" @click="showUserSelect = false">閉じる</button>
+          <button type="button" class="btn-primary mt-2" @click="showAddUser = true">
+            プレイヤーを追加
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="showAddUser"
+        class="fixed inset-0 z-[60] bg-black/70 flex items-center px-4"
+        @click.self="showAddUser = false"
+      >
+        <div class="card w-full max-w-sm mx-auto animate-slide-up">
+          <p class="font-medium mb-3">新しいプレイヤー</p>
+          <input v-model="newUserName" type="text" class="input-base mb-3" placeholder="名前" maxlength="32">
+          <button type="button" class="btn-primary mb-2" :disabled="!newUserName.trim()" @click="onAddUser">
+            追加
+          </button>
+          <button type="button" class="btn-secondary" @click="showAddUser = false">キャンセル</button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -113,7 +171,7 @@ import { useMahjongSeasons } from '~/composables/useMahjongSeasons'
 
 definePageMeta({ layout: 'default' })
 
-const { currentUserId, fetchUsers } = useAuth()
+const { currentUserId, fetchUsers, login, currentUserName, createUser } = useAuth()
 const { fetchHanchans, fetchHanchansBySeasonId } = useHanchans()
 const { fetchCurrentSeason, fetchSeasons } = useMahjongSeasons()
 const { calcPlayerStats, formatRate, formatAvgPlacement } = useStats()
@@ -122,6 +180,9 @@ const { formatPoint, pointClass } = useScoreCalc()
 const tab = ref<'all' | 'season'>('all')
 const loading = ref(true)
 const seasonTabReady = ref(false)
+const showUserSelect = ref(false)
+const showAddUser = ref(false)
+const newUserName = ref('')
 const users = ref<User[]>([])
 const seasons = ref<Season[]>([])
 const selectedSeasonId = ref('')
@@ -151,6 +212,23 @@ const resolveSeasonId = (list: Season[], currentId: string | null) => {
 const applyStats = (u: User[], list: HanchanWithScores[]) => {
   const me = u.find(x => x.id === currentUserId.value)
   stats.value = me ? calcPlayerStats(me, list) : null
+}
+
+const selectUser = (user: User) => {
+  login(user)
+  showUserSelect.value = false
+}
+
+const onAddUser = async () => {
+  const name = newUserName.value.trim()
+  if (!name) return
+  const u = await createUser(name)
+  if (!u) {
+    return
+  }
+  newUserName.value = ''
+  showAddUser.value = false
+  await loadAllTab()
 }
 
 const loadAllTab = async () => {

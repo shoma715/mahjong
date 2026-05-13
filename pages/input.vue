@@ -134,26 +134,6 @@
       {{ saving ? '保存中…' : '保存する' }}
     </button>
 
-    <button type="button" class="btn-secondary" @click="showAddUser = true">
-      プレイヤーを追加
-    </button>
-
-    <Teleport to="body">
-      <div
-        v-if="showAddUser"
-        class="fixed inset-0 z-[60] bg-black/70 flex items-center px-4"
-        @click.self="showAddUser = false"
-      >
-        <div class="card w-full max-w-sm mx-auto animate-slide-up">
-          <p class="font-medium mb-3">新しいプレイヤー</p>
-          <input v-model="newUserName" type="text" class="input-base mb-3" placeholder="名前" maxlength="32">
-          <button type="button" class="btn-primary mb-2" :disabled="!newUserName.trim()" @click="onAddUser">
-            追加
-          </button>
-          <button type="button" class="btn-secondary" @click="showAddUser = false">キャンセル</button>
-        </div>
-      </div>
-    </Teleport>
     </template>
   </div>
 </template>
@@ -165,7 +145,7 @@ import { useSeasons } from '~/composables/useSeasons'
 
 definePageMeta({ layout: 'default' })
 
-const { fetchUsers, createUser } = useAuth()
+const { fetchUsers } = useAuth()
 const { saveHanchan } = useHanchans()
 const {
   validateTotal,
@@ -203,8 +183,6 @@ const rows = ref<ScoreInput[]>([
 
 const saving = ref(false)
 const errorMsg = ref('')
-const showAddUser = ref(false)
-const newUserName = ref('')
 
 const totalPoints = computed(() =>
   currentTotal(rows.value as ScoreInput[]),
@@ -251,10 +229,6 @@ const preview = computed<CalcResult[]>(() => {
 
 const userName = (id: string) => users.value.find(u => u.id === id)?.name ?? ''
 
-const loadUsers = async () => {
-  users.value = await fetchUsers()
-}
-
 onMounted(async () => {
   seasonLoading.value = true
   const [usersList, season] = await Promise.all([fetchUsers(), fetchCurrentSeason()])
@@ -275,23 +249,10 @@ const onSave = async () => {
     errorMsg.value = '保存に失敗しました。Supabase の設定とテーブルを確認してください。'
     return
   }
-  await navigateTo('/history')
+  await navigateTo('/')
 }
 
 const resetRules = () => {
   Object.assign(rules.value, defaultHanchanRules())
-}
-
-const onAddUser = async () => {
-  const name = newUserName.value.trim()
-  if (!name) return
-  const u = await createUser(name)
-  if (!u) {
-    errorMsg.value = 'プレイヤーの追加に失敗しました'
-    return
-  }
-  newUserName.value = ''
-  showAddUser.value = false
-  await loadUsers()
 }
 </script>

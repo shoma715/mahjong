@@ -17,9 +17,9 @@
           :class="{ active: isActive(item.to) }"
         >
           <!-- アイコン -->
-          <component :is="item.icon" class="w-5 h-5" />
+          <component :is="item.icon" class="w-6 h-6" />
           <!-- ラベル -->
-          <span class="text-[10px] font-medium leading-none">{{ item.label }}</span>
+          <span class="text-xs font-medium leading-none">{{ item.label }}</span>
         </NuxtLink>
       </div>
     </nav>

@@ -78,6 +78,7 @@ export interface PlayerStats {
   total_point: number
   avg_placement: number
   best_point: number
+  best_raw_score: number
   top_rate: number
   rentai_rate: number
   last_avoidance_rate: number

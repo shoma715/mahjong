@@ -29,6 +29,7 @@ export const useStats = () => {
         total_point: 0,
         avg_placement: 0,
         best_point: 0,
+        best_raw_score: 0,
         top_rate: 0,
         rentai_rate: 0,
         last_avoidance_rate: 0,
@@ -51,6 +52,7 @@ export const useStats = () => {
       Math.round((myScores.reduce((sum, s) => sum + s.placement, 0) / totalGames) * 100) / 100
 
     const best_point = Math.max(...myScores.map(s => s.point))
+    const best_raw_score = Math.max(...myScores.map(s => s.raw_score))
 
     const top_rate = rank_counts[0] / totalGames
     const rentai_rate = (rank_counts[0] + rank_counts[1]) / totalGames
@@ -67,6 +69,7 @@ export const useStats = () => {
       total_point,
       avg_placement,
       best_point,
+      best_raw_score,
       top_rate,
       rentai_rate,
       last_avoidance_rate,

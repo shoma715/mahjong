@@ -19,6 +19,29 @@
       </p>
     </section>
 
+    <section class="mb-6">
+      <p class="section-title mb-3">シーズン内ランキング</p>
+      <div class="space-y-2">
+        <div
+          v-for="(stat, idx) in seasonStats"
+          :key="stat.user.id"
+          class="card flex items-center gap-3"
+        >
+          <span class="rank-badge shrink-0" :class="`rank-badge-${Math.min(idx + 1, 4)}`">
+            {{ idx + 1 }}
+          </span>
+          <span class="flex-1 font-medium text-sm truncate">{{ stat.user.name }}</span>
+          <span class="tabular text-sm shrink-0" :class="pointClass(stat.total_point)">
+            {{ formatPoint(stat.total_point) }}
+          </span>
+          <span class="text-white/30 text-xs tabular shrink-0">{{ stat.total_games }}戦</span>
+        </div>
+        <div v-if="seasonStats.length === 0 && !loading" class="card text-center text-white/40 text-sm py-8">
+          データがありません
+        </div>
+      </div>
+    </section>
+
     <div v-if="loading" class="card text-center text-white/40 py-10">読み込み中…</div>
 
     <div v-else-if="!selectedSeasonId || grouped.length === 0" class="card text-center text-white/40 text-sm py-10">
@@ -62,12 +85,16 @@ definePageMeta({ layout: 'default' })
 
 const { fetchHanchansBySeasonId } = useHanchans()
 const { fetchSeasons, fetchCurrentSeason } = useMahjongSeasons()
+const { fetchUsers } = useAuth()
+const { calcAllStats } = useStats()
 const { formatPoint, pointClass } = useScoreCalc()
 
 const loading = ref(true)
 const seasons = ref<Season[]>([])
 const selectedSeasonId = ref<string | null>(null)
 const list = ref<HanchanWithScores[]>([])
+const users = ref<Awaited<ReturnType<typeof fetchUsers>>>([])
+const seasonStats = ref<ReturnType<typeof calcAllStats>>([])
 
 const sortedScores = (scores: ScoreWithRelations[]) =>
   [...scores].sort((a, b) => a.placement - b.placement)
@@ -104,11 +131,13 @@ const loadList = async () => {
   const s = seasons.value.find(x => x.id === selectedSeasonId.value)
   if (!s) {
     list.value = []
+    seasonStats.value = calcAllStats(users.value, [])
     return
   }
   list.value = await fetchHanchansBySeasonId(s.id)
   // Ensure newest first
   list.value = list.value.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+  seasonStats.value = calcAllStats(users.value, list.value)
 }
 
 watch(selectedSeasonId, async () => {
@@ -120,10 +149,12 @@ watch(selectedSeasonId, async () => {
 
 onMounted(async () => {
   loading.value = true
-  const [allSeasons, current] = await Promise.all([
+  const [allSeasons, current, fetchedUsers] = await Promise.all([
     fetchSeasons(),
     fetchCurrentSeason(),
+    fetchUsers(),
   ])
+  users.value = fetchedUsers
   seasons.value = [...allSeasons].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
   selectedSeasonId.value = current?.id ?? seasons.value[0]?.id ?? null
   await loadList()

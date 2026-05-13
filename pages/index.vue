@@ -23,13 +23,6 @@
         >
           <Cog6ToothIcon class="w-5 h-5" />
         </NuxtLink>
-        <button
-          type="button"
-          class="w-10 h-10 rounded-full bg-jade/20 border border-jade/30 flex items-center justify-center text-jade-light font-bold text-sm"
-          @click="showUserSelect = true"
-        >
-          {{ currentUserName ? currentUserName[0] : '?' }}
-        </button>
       </div>
     </header>
 
@@ -52,6 +45,56 @@
       >
         総合
       </button>
+      <button
+        type="button"
+        class="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+        :class="rankingScope === 'custom' ? 'bg-jade text-white' : 'text-white/50'"
+        @click="rankingScope = 'custom'"
+      >
+        カスタム
+      </button>
+    </div>
+
+    <!-- カスタムスコープ: 日付選択UI -->
+    <div v-if="rankingScope === 'custom'" class="mb-4">
+      <button
+        type="button"
+        class="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-felt-100 border border-white/10 text-white/60 hover:border-jade/40 hover:text-jade-light transition-colors"
+        @click="showDatePicker = !showDatePicker"
+      >
+        <span class="text-sm font-medium">
+          {{ selectedDates.length }}日を選択中
+        </span>
+        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showDatePicker }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      </button>
+      <transition name="fade-slide">
+        <div v-if="showDatePicker" class="mt-2 card space-y-2 max-h-64 overflow-y-auto">
+          <div v-if="availableDates.length === 0" class="text-center text-white/40 text-xs py-4">
+            利用可能な日付がありません
+          </div>
+          <label v-for="date in availableDates" :key="date" class="flex items-center gap-2 p-2 rounded-lg hover:bg-felt-100 transition-colors cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="selectedDates.includes(date)"
+              @change="toggleDateSelection(date)"
+              class="w-4 h-4 rounded border-white/30 bg-felt-100 accent-jade cursor-pointer"
+            />
+            <span class="text-sm text-white/80">{{ formatDisplayDate(date) }}</span>
+            <span class="text-xs text-white/30">{{ dateGameCounts[date] || 0 }}戦</span>
+          </label>
+          <div v-if="selectedDates.length > 0" class="pt-2 border-t border-white/10">
+            <button
+              type="button"
+              class="w-full text-xs text-white/50 hover:text-white/70 transition-colors py-1"
+              @click="selectedDates = []"
+            >
+              すべてクリア
+            </button>
+          </div>
+        </div>
+      </transition>
     </div>
 
     <section class="mb-6">
@@ -63,6 +106,12 @@
         進行中のシーズンがありません。上部の「新しいシーズンを開始」から開始するか、
         <NuxtLink to="/admin/seasons" class="text-jade-light underline">シーズン管理</NuxtLink>
         画面から作成してください。
+      </p>
+      <p
+        v-if="rankingScope === 'custom' && selectedDates.length === 0"
+        class="text-white/40 text-xs mb-3"
+      >
+        日付を選択してください
       </p>
       <div class="space-y-2">
         <div
@@ -80,8 +129,11 @@
           </span>
           <span class="text-white/30 text-xs tabular shrink-0">{{ stat.total_games }}戦</span>
         </div>
-        <div v-if="allStats.length === 0 && !loading" class="card text-center text-white/40 text-sm py-8">
+        <div v-if="allStats.length === 0 && !loading && rankingScope !== 'custom'" class="card text-center text-white/40 text-sm py-8">
           データがありません
+        </div>
+        <div v-if="allStats.length === 0 && !loading && rankingScope === 'custom' && selectedDates.length > 0" class="card text-center text-white/40 text-sm py-8">
+          該当するデータがありません
         </div>
         <div v-if="loading" class="card text-center text-white/30 text-sm py-8">
           読み込み中...
@@ -159,35 +211,6 @@
         </div>
       </div>
     </Teleport>
-
-    <Teleport to="body">
-      <div
-        v-if="showUserSelect"
-        class="fixed inset-0 z-[60] bg-black/70 flex items-end"
-        @click.self="showUserSelect = false"
-      >
-        <div class="w-full max-w-md mx-auto bg-felt-50 rounded-t-3xl p-6 pb-8 animate-slide-up max-h-[80vh] overflow-y-auto">
-          <p class="section-title mb-4 text-center">プレイヤーを選択</p>
-          <div class="space-y-2">
-            <button
-              v-for="user in users"
-              :key="user.id"
-              type="button"
-              class="w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left"
-              :class="user.id === currentUserId ? 'bg-jade/20 text-jade-light' : 'bg-felt-100 text-white'"
-              @click="selectUser(user)"
-            >
-              <span class="w-8 h-8 rounded-full bg-jade/20 flex items-center justify-center text-sm font-bold shrink-0">
-                {{ user.name[0] }}
-              </span>
-              <span class="font-medium truncate">{{ user.name }}</span>
-              <span v-if="user.id === currentUserId" class="ml-auto text-xs text-jade-light shrink-0">選択中</span>
-            </button>
-          </div>
-          <button type="button" class="btn-secondary mt-4" @click="showUserSelect = false">閉じる</button>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -208,9 +231,9 @@ const { calcAllStats } = useStats()
 const { formatPoint, pointClass } = useScoreCalc()
 
 const loading = ref(true)
-const rankingScope = ref<'season' | 'all'>('season')
-const showUserSelect = ref(false)
+const rankingScope = ref<'season' | 'all' | 'custom'>('season')
 const showSeasonStartModal = ref(false)
+const showDatePicker = ref(false)
 const seasonBusy = ref(false)
 const seasonModalError = ref('')
 const flashMessage = ref('')
@@ -218,18 +241,30 @@ const users = ref<User[]>([])
 const recentHanchans = ref<HanchanWithScores[]>([])
 const currentSeason = ref<Awaited<ReturnType<typeof fetchCurrentSeason>>>(null)
 const allStats = ref<ReturnType<typeof calcAllStats>>([])
+const selectedDates = ref<string[]>([])
+const availableDates = ref<string[]>([])
+const dateGameCounts = ref<Record<string, number>>({})
 
 const headerTitle = computed(() => {
+  if (rankingScope.value === 'custom') {
+    return selectedDates.length > 0 ? `${selectedDates.length}日間` : 'カスタム'
+  }
   if (rankingScope.value === 'all') return '全期間'
   return currentSeason.value?.name ?? 'シーズン'
 })
 
 const rankingSectionLabel = computed(() => {
+  if (rankingScope.value === 'custom') return 'カスタムランキング'
   if (rankingScope.value === 'all') return '全期間ランキング'
   return currentSeason.value ? 'シーズン内ランキング' : 'シーズン内ランキング'
 })
 
 const recentScopeHint = computed(() => {
+  if (rankingScope.value === 'custom') {
+    return selectedDates.length > 0 
+      ? `選択した${selectedDates.length}日間の直近5半荘`
+      : '日付を選択して対局を表示'
+  }
   if (rankingScope.value === 'all') return '全期間の直近5半荘'
   return currentSeason.value
     ? '今シーズンに紐付いた対局の直近5半荘'
@@ -241,12 +276,51 @@ const formatDate = (iso: string) => {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
 }
 
+const formatDisplayDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year, month - 1, day)
+  const dayName = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
+  return `${month}月${day}日 (${dayName})`
+}
+
 const sortedScores = (scores: ScoreWithRelations[]) =>
   [...scores].sort((a, b) => a.placement - b.placement)
 
-const selectUser = (user: User) => {
-  login(user)
-  showUserSelect.value = false
+const toggleDateSelection = (date: string) => {
+  const idx = selectedDates.value.indexOf(date)
+  if (idx >= 0) {
+    selectedDates.value.splice(idx, 1)
+  } else {
+    selectedDates.value.push(date)
+  }
+  selectedDates.value = [...selectedDates.value].sort()
+}
+
+const extractDatesFromHanchans = (hanchans: HanchanWithScores[]) => {
+  const dateMap = new Map<string, number>()
+  const dateSet = new Set<string>()
+  
+  for (const h of hanchans) {
+    const d = new Date(h.played_at)
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    dateSet.add(dateStr)
+    dateMap.set(dateStr, (dateMap.get(dateStr) ?? 0) + 1)
+  }
+  
+  return {
+    dates: Array.from(dateSet).sort().reverse(),
+    counts: dateMap,
+  }
+}
+
+const filterHanchansByCustomDates = (hanchans: HanchanWithScores[], dates: string[]): HanchanWithScores[] => {
+  if (dates.length === 0) return []
+  
+  return hanchans.filter(h => {
+    const d = new Date(h.played_at)
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return dates.includes(dateStr)
+  })
 }
 
 const currentYear = new Date().getFullYear()
@@ -318,24 +392,44 @@ async function loadDashboard() {
   loading.value = true
   const season = currentSeason.value
   let hanchans: HanchanWithScores[] = []
-  if (rankingScope.value === 'all') {
+  
+  if (rankingScope.value === 'custom') {
+    // カスタム: 全半荘から利用可能な日付を抽出、選択された日付でフィルタ
+    const allHanchans = await fetchHanchans(1000)
+    const { dates, counts } = extractDatesFromHanchans(allHanchans)
+    availableDates.value = dates
+    dateGameCounts.value = Object.fromEntries(counts)
+    
+    hanchans = filterHanchansByCustomDates(allHanchans, selectedDates.value)
+  } else if (rankingScope.value === 'all') {
     hanchans = await fetchHanchans(1000)
   } else if (season) {
     hanchans = await fetchHanchansBySeasonId(season.id)
   } else {
     hanchans = []
   }
+  
   // sort newest-first then take 5
   recentHanchans.value = hanchans
     .sort((a, b) => new Date(b.created_at ?? b.played_at).getTime() - new Date(a.created_at ?? a.played_at).getTime())
     .slice(0, 5)
+  
   allStats.value = calcAllStats(users.value, hanchans)
   loading.value = false
 }
 
 watch(rankingScope, () => {
-  if (users.value.length) loadDashboard()
+  if (users.value.length) {
+    selectedDates.value = []
+    loadDashboard()
+  }
 })
+
+watch(selectedDates, () => {
+  if (rankingScope.value === 'custom' && users.value.length) {
+    loadDashboard()
+  }
+}, { deep: true })
 
 onMounted(async () => {
   if (route.query.season === 'created') {
