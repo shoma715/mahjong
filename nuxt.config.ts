@@ -21,6 +21,9 @@ export default defineNuxtConfig({
         '#app-manifest': resolve(projectRoot, 'node_modules/mocked-exports/lib/empty.mjs'),
       },
     },
+    server: {
+      allowedHosts: ['unavailable-flow-stuffed-shoulder.trycloudflare.com'],
+    },
   },
 
   modules: [
@@ -55,6 +58,7 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: process.env.SUPABASE_URL ?? '',
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
+      liffId: '2010089650-gSzzeiJ6',
     },
   },
 
@@ -86,4 +90,6 @@ export default defineNuxtConfig({
   ssr: false,
 
   css: ['~/assets/main.css'],
+
+  // 今回追加する設定（vite 設定は上で統合済み）
 })

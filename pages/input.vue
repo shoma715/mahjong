@@ -25,7 +25,7 @@
     <template v-else>
       <section class="card mb-4">
         <label class="section-title block mb-2">対局日</label>
-        <input v-model="playedDate" type="date" class="input-base tabular">
+        <input v-model="playedDate" type="date" class="input-base tabular date-input">
       </section>
 
       <section class="card mb-4">

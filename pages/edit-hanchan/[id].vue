@@ -13,7 +13,7 @@
     <template v-else-if="hanchan">
       <section class="card mb-4">
         <label class="section-title block mb-2">対局日</label>
-        <input v-model="playedDate" type="date" class="input-base tabular">
+        <input v-model="playedDate" type="date" class="input-base tabular date-input">
       </section>
 
       <section class="space-y-4 mb-4">

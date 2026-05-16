@@ -30,6 +30,7 @@
   /* カード */
   .card {
     @apply bg-felt-50 rounded-2xl p-4 border border-white/5;
+    overflow: hidden;
   }
 
   /* ボタン — プライマリ */
@@ -54,6 +55,20 @@
         focus:outline-none focus:border-jade/60
         transition-colors duration-150;
       box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+  }
+
+  /* iPhone の date input 用 */
+  .date-input {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    text-align: left;
+  }
+
+  .date-input::-webkit-date-and-time-value {
+    text-align: left;
   }
 
   /* 順位バッジ */
@@ -78,7 +93,7 @@
 
   /* ボトムナビアイテム */
   .nav-item {
-    @apply flex flex-col items-center gap-1 pt-3 pb-2 px-4
+    @apply flex flex-col items-center gap-1 pt-3 pb-10 px-4
            text-white/40 transition-colors duration-150;
   }
   .nav-item.active { @apply text-jade-light; }

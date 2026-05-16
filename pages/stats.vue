@@ -15,7 +15,7 @@
     </header>
 
     <div v-if="!currentUserId" class="card text-center text-white/50 text-sm py-10">
-      ホーム画面の右上から自分のプレイヤーを選択してください。
+      画面の右上から自分のプレイヤーを選択してください。
     </div>
 
     <template v-else>
@@ -278,6 +278,12 @@ const loadFromSeasonSelection = async () => {
   applyStats(u, list)
   loading.value = false
 }
+
+onMounted(async () => {
+  if (!users.value.length) {
+    users.value = await fetchUsers()
+  }
+})
 
 watch([tab, currentUserId], async () => {
   if (!currentUserId.value) {

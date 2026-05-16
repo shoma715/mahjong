@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-felt">
     <!-- メインコンテンツ -->
-    <main>
+    <main class="page-container">
       <slot />
     </main>
 

@@ -19,6 +19,8 @@ import { NuxtModule, ModuleDependencyMeta } from '@nuxt/schema'
    supabaseUrl: string,
 
    supabaseAnonKey: string,
+
+   liffId: string,
   }
 declare module '@nuxt/schema' {
   interface ModuleDependencies {

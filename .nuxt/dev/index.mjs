@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getResponseStatusText } from 'file:///Users/shomatakeda/Desktop/mahjong-tracker/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, createError, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getMethod, getResponseStatusText } from 'file:///Users/shomatakeda/Desktop/mahjong-tracker/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import crypto$1 from 'node:crypto';
@@ -694,7 +694,8 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "supabaseUrl": "https://usfrifzciyzkxbhmuagu.supabase.co",
-    "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZnJpZnpjaXl6a3hiaG11YWd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODc4OTQsImV4cCI6MjA5NDA2Mzg5NH0.V6ge4Qbh23nwah15LAHvKyK-ipXWsWe7btz3Hq1Z5oA"
+    "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZnJpZnpjaXl6a3hiaG11YWd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0ODc4OTQsImV4cCI6MjA5NDA2Mzg5NH0.V6ge4Qbh23nwah15LAHvKyK-ipXWsWe7btz3Hq1Z5oA",
+    "liffId": "2010089650-gSzzeiJ6"
   }
 };
 const envOptions = {
@@ -2678,10 +2679,14 @@ async function getIslandContext(event) {
 	};
 }
 
+const _lazy_4ucMMz = () => Promise.resolve().then(function () { return webhook$1; });
+const _lazy_7eO8C9 = () => Promise.resolve().then(function () { return notify_post$1; });
 const _lazy_y27t13 = () => Promise.resolve().then(function () { return renderer; });
 
 const handlers = [
   { route: '', handler: _7TC1jw, lazy: false, middleware: true, method: undefined },
+  { route: '/api/line/webhook', handler: _lazy_4ucMMz, lazy: true, middleware: false, method: undefined },
+  { route: '/api/notify', handler: _lazy_7eO8C9, lazy: true, middleware: false, method: "post" },
   { route: '/__nuxt_error', handler: _lazy_y27t13, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: handler$1, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_y27t13, lazy: true, middleware: false, method: undefined }
@@ -3034,6 +3039,72 @@ const styles = {};
 const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: styles
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const webhook = defineEventHandler(async (event) => {
+  const method = getMethod(event);
+  if (method === "GET") {
+    return "Webhook is running!";
+  }
+  try {
+    const body = await readBody(event);
+    if (!body) {
+      return "No body";
+    }
+    if (body.events && body.events.length === 0) {
+      console.log("\u2705 LINE\u30DC\u30C3\u30C8\u304B\u3089\u306E\u63A5\u7D9A\u30C6\u30B9\u30C8\u6210\u529F\uFF01");
+      return "OK";
+    }
+    console.log("\u{1F4E9} LINE\u304B\u3089\u901A\u77E5\u304C\u6765\u307E\u3057\u305F:", JSON.stringify(body, null, 2));
+    return "OK";
+  } catch (error) {
+    console.error("\u274C Webhook\u51E6\u7406\u4E2D\u306B\u30A8\u30E9\u30FC:", error);
+    return "Error";
+  }
+});
+
+const webhook$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: webhook
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const notify_post = defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event);
+    if (!body) return { error: "No body" };
+    const { userId, message } = body;
+    if (!userId || !message) return { error: "Missing userId or message" };
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (!token) {
+      console.error("LINE_CHANNEL_ACCESS_TOKEN is not set");
+      return { error: "Server misconfigured: missing LINE_CHANNEL_ACCESS_TOKEN" };
+    }
+    const res = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: [{ type: "text", text: message }]
+      })
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("LINE API error:", res.status, text);
+      return { error: "LINE API error", status: res.status, body: text };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("notify handler error:", err);
+    return { error: "Internal server error" };
+  }
+});
+
+const notify_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: notify_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {
